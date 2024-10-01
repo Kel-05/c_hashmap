@@ -35,7 +35,7 @@ void hashmap_rehash(hashmap *self, size_t size) {
   uint32_t new_cap = self->init_cap;
 
   while(new_cap < size) {
-  new_cap <<= 1;
+    new_cap <<= 1;
   }
   
   if(new_cap > self->max_cap || new_cap < self->init_cap) {
@@ -87,7 +87,7 @@ void hashmap_put(hashmap *self, char *key, size_t key_size, int value) {
   uint32_t hash = str_hashcode(key, key_size);
   node *nd = (node *) malloc(sizeof(node)), *prev_nd;
 
-  while(self->init_cap < hash + 1) {
+  if(self->init_cap < hash + 1) {
     hashmap_rehash(self, hash + 1);
   }
   
