@@ -35,6 +35,22 @@ uint32_t str_hashcode(char *key) {
   return hash;
 }
 
+void node_destroy(node *self) {
+  while(self != NULL) {
+    node *tmp = self;
+    self = self->next;
+    free(tmp->key);
+    free(tmp);
+  }
+}
+
+void hashmap_destroy(hashmap *self) {
+  for(uint32_t i = 0; i < self->init_cap; i++) {
+    node_destroy(self->nodelist[i]);
+  }
+  free(self->nodelist);
+}
+
 void hashmap_rehash(hashmap *self) {
   uint32_t new_cap = self->init_cap << 1;
   uint32_t old_cap = self->init_cap;
@@ -54,7 +70,8 @@ void hashmap_rehash(hashmap *self) {
 
   for(uint32_t i = 0; i < old_cap; i++) {
     if(old_nodelist[i] != NULL) {
-      self->put(self, old_nodelist[i]->key, old_nodelist[i]->value);
+      old_nodelist[i]->hash = str_hashcode(old_nodelist[i]->key) % new_cap;
+      self->nodelist[old_nodelist[i]->hash] = old_nodelist[i];
     }
   }
 
@@ -145,6 +162,7 @@ int main(void) {
   for(i = 0, c[0] = 'A'; i < 26; i++, c[0]++) {
     printf("%s: %d\n", c, hs.get(&hs, c));
   }
-  
+
+  hashmap_destroy(&hs);
   return 0;
 }
