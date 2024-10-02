@@ -5,6 +5,7 @@
 
 #define DEF_INIT_CAP 16
 #define DEF_MAX_CAP (2 << 30)
+#define DEF_LOAD_FACTOR 0.75
 
 typedef struct node {
   uint32_t hash;
@@ -14,57 +15,60 @@ typedef struct node {
 } node;
 
 typedef struct hashmap {
-  struct node **table;
+  struct node **nodelist;
   uint32_t init_cap;
   uint32_t max_cap;
+  uint32_t current_size;
+  double load_factor;
 
-  int (*get)(struct hashmap*, char*, size_t);
-  void (*put)(struct hashmap*, char*, size_t, int);
-  void (*rehash)(struct hashmap *, size_t);
+  int (*get)(struct hashmap*, char*);
+  void (*put)(struct hashmap*, char*, int);
+  void (*rehash)(struct hashmap *);
 } hashmap;
 
-uint32_t str_hashcode(char *key, size_t key_size) {
+uint32_t str_hashcode(char *key) {
   uint32_t hash = 0;
-  for(size_t i = 0; i < key_size; i++) {
-    hash += key[i];
+  size_t len = strlen(key);
+  for(size_t i = 0; i < len; i++) {
+    hash += key[i] * 31;
   }
-  return hash << 5;
+  return hash;
 }
 
-void hashmap_rehash(hashmap *self, size_t size) {
-  uint32_t new_cap = self->init_cap;
-
-  while(new_cap < size) {
-    new_cap <<= 1;
-  }
+void hashmap_rehash(hashmap *self) {
+  uint32_t new_cap = self->init_cap << 1;
+  uint32_t old_cap = self->init_cap;
   
-  if(new_cap > self->max_cap || new_cap < self->init_cap) {
+  if(new_cap > self->max_cap || new_cap < old_cap) {
     fprintf(stderr, "Error: hashmap_rehash: invalid capacity: %u\n", new_cap);
     abort();
   }
-  
-  node **new_table = (node **) malloc(sizeof(node *) * new_cap);
-  memset(new_table, 0, sizeof(node *) * new_cap);
 
-  for(uint32_t i = 0; i < self->init_cap; i++) {
-    if(self->table[i] != NULL) {
-      new_table[i] = self->table[i];
+  self->init_cap = new_cap;
+
+  node **new_nodelist = (node **) malloc(sizeof(node *) * new_cap);
+  memset(new_nodelist, 0, sizeof(node *) * new_cap);
+  node **old_nodelist = self->nodelist;
+  self->nodelist = new_nodelist;
+  self->current_size = 0;
+
+  for(uint32_t i = 0; i < old_cap; i++) {
+    if(old_nodelist[i] != NULL) {
+      self->put(self, old_nodelist[i]->key, old_nodelist[i]->value);
     }
   }
 
-  free(self->table);
-  self->table = new_table;
-  self->init_cap = new_cap;
+  free(old_nodelist);
 }
 
-int hashmap_get(hashmap *self, char *key, size_t key_size) {
-  uint32_t hash = str_hashcode(key, key_size);
+int hashmap_get(hashmap *self, char *key) {
+  uint32_t hash = str_hashcode(key) % self->init_cap;
   
   if(self->init_cap < hash + 1) {
     return -1;
   }
 
-  node *nd = self->table[hash];
+  node *nd = self->nodelist[hash];
 
   if(nd == NULL) {
     return -1;
@@ -83,22 +87,20 @@ int hashmap_get(hashmap *self, char *key, size_t key_size) {
   return -1;
 }
 
-void hashmap_put(hashmap *self, char *key, size_t key_size, int value) {
-  uint32_t hash = str_hashcode(key, key_size);
+void hashmap_put(hashmap *self, char *key, int value) {
+  uint32_t hash = str_hashcode(key) % self->init_cap;
   node *nd = (node *) malloc(sizeof(node)), *prev_nd;
-
-  if(self->init_cap < hash + 1) {
-    hashmap_rehash(self, hash + 1);
-  }
-  
-  node *next_nd = self->table[hash];
+  node *next_nd = self->nodelist[hash];
+  nd->key = (char *) malloc(strlen(key) + 1);
   
   nd->hash = hash;
-  nd->key = key;
+  strcpy(nd->key, key);
   nd->value = value;
   nd->next = NULL;
 
   if(next_nd != NULL) {
+    prev_nd = next_nd;
+    next_nd = next_nd->next;
     while(next_nd != NULL) {
       prev_nd = next_nd;
       next_nd = next_nd->next;
@@ -106,17 +108,23 @@ void hashmap_put(hashmap *self, char *key, size_t key_size, int value) {
     prev_nd->next = nd;
   }
   else {
-    self->table[hash] = nd;
+    self->nodelist[hash] = nd;
+    self->current_size++;
+  }
+
+  if((double) self->current_size / self->init_cap >= self->load_factor) {
+    self->rehash(self);
   }
   
 }
 
-void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap) {
+void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor) {
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
-  self->init_cap = max_cap ? max_cap : DEF_MAX_CAP;
+  self->max_cap = max_cap ? max_cap : DEF_MAX_CAP;
+  self->load_factor = load_factor ? load_factor : DEF_LOAD_FACTOR;
   
-  self->table = (node **) malloc(sizeof(node *) * self->init_cap);
-  memset(self->table, 0, sizeof(node *) * self->init_cap);
+  self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
+  memset(self->nodelist, 0, sizeof(node *) * self->init_cap);
   
   self->get = hashmap_get;
   self->put = hashmap_put;
@@ -125,15 +133,18 @@ void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap) {
 
 int main(void) {
   struct hashmap hs;
-  hashmap_init(&hs, 0, 0);
+  hashmap_init(&hs, 0, 0, 0);
 
-  hs.put(&hs, "foo", 4, 1);
-  hs.put(&hs, "bar", 4, 2);
-  hs.put(&hs, "baz", 4, 3);
+  int i = 0;
+  char c[] = "A hello";
 
-  printf("foo: %d\n", hs.get(&hs, "foo", 4));
-  printf("bar: %d\n", hs.get(&hs, "bar", 4));
-  printf("baz: %d\n", hs.get(&hs, "baz", 4));
+  for(; i < 26; i++, c[0]++) {
+    hs.put(&hs, c, i);
+  }
+  
+  for(i = 0, c[0] = 'A'; i < 26; i++, c[0]++) {
+    printf("%s: %d\n", c, hs.get(&hs, c));
+  }
   
   return 0;
 }
