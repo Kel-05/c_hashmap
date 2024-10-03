@@ -18,9 +18,11 @@ typedef struct node {
 uint32_t str_hashcode(char *key) {
   uint32_t hash = 0;
   size_t len = strlen(key);
+  
   for(size_t i = 0; i < len; i++) {
     hash += key[i] * 31;
   }
+  
   return hash;
 }
 
@@ -48,7 +50,6 @@ void hashmap_rehash(hashmap *self) {
     fprintf(stderr, "Error: hashmap_rehash: invalid capacity: %u\n", new_cap);
     abort();
   }
-
   self->init_cap = new_cap;
 
   node **old_nodelist = self->nodelist;
@@ -61,32 +62,25 @@ void hashmap_rehash(hashmap *self) {
     old_nodelist[i]->hash = str_hashcode(old_nodelist[i]->key) % new_cap;
     self->nodelist[old_nodelist[i]->hash] = old_nodelist[i];
   }
-
+  
   free(old_nodelist);
 }
 
 int hashmap_get(hashmap *self, char *key) {
   uint32_t hash = str_hashcode(key) % self->init_cap;
-  
-  if(self->init_cap < hash + 1) {
-    return -1;
-  }
-
   node *nd = self->nodelist[hash];
 
   if(nd == NULL) {
     return -1;
   }
-
-  if(strcmp(nd->key, key) == 0) {
+  if(nd->next == NULL) {
     return nd->value;
   }
-  else {
-    nd = nd->next;
-    while(nd != NULL) {
-      if(strcmp(nd->key, key) == 0) return nd->value;
-      nd = nd->next;
+  while(nd != NULL) {
+    if(strcmp(nd->key, key) == 0) {
+      return nd->value;
     }
+    nd = nd->next;
   }
   
   return -1;
@@ -97,28 +91,24 @@ void hashmap_put(hashmap *self, char *key, int value) {
   node *nd = (node *) malloc(sizeof(node));
   node **next_nd = &self->nodelist[hash];
   nd->key = (char *) malloc(strlen(key) + 1);
+  memset(nd->key, 0, strlen(key) + 1);
   
   nd->hash = hash;
   strcpy(nd->key, key);
   nd->value = value;
   nd->next = NULL;
 
-  if(*next_nd != NULL) {
-    next_nd = &(*next_nd)->next;
-    while(*next_nd != NULL) {
-      next_nd = &(*next_nd)->next;
-    }
-    *next_nd = nd;
-  }
-  else {
-    self->nodelist[hash] = nd;
+  if(*next_nd == NULL) {
     self->current_size++;
   }
+  while(*next_nd != NULL) {
+    next_nd = &(*next_nd)->next;
+  }
+  *next_nd = nd;
 
   if((double) self->current_size / self->init_cap >= self->load_factor) {
     hashmap_rehash(self);
   }
-  
 }
 
 void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor) {
