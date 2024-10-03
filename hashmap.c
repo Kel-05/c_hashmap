@@ -51,10 +51,9 @@ void hashmap_rehash(hashmap *self) {
 
   self->init_cap = new_cap;
 
-  node **new_nodelist = (node **) malloc(sizeof(node *) * new_cap);
-  memset(new_nodelist, 0, sizeof(node *) * new_cap);
   node **old_nodelist = self->nodelist;
-  self->nodelist = new_nodelist;
+  self->nodelist = (node **) malloc(sizeof(node *) * new_cap);
+  memset(self->nodelist, 0, sizeof(node *) * new_cap);
   self->current_size = 0;
 
   for(uint32_t i = 0; i < old_cap; i++) {
