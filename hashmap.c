@@ -115,7 +115,8 @@ void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double loa
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
   self->max_cap = max_cap ? max_cap : DEF_MAX_CAP;
   self->load_factor = load_factor <= 1 && load_factor > 0 ? load_factor : DEF_LOAD_FACTOR;
-  
+  self->current_size = 0;
+
   self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
   memset(self->nodelist, 0, sizeof(node *) * self->init_cap);
   
