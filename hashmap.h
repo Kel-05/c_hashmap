@@ -1,5 +1,5 @@
-#ifndef HASHMAP_H_
-#define HASHMAP_H_
+#ifndef HASHMAP_H
+#define HASHMAP_H
 #include <stdint.h>
 
 struct node;
