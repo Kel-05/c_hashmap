@@ -93,19 +93,26 @@ void hashmap_rehash(hashmap *self) {
   memset(self->nodelist, 0, sizeof(node *) * new_cap);
   self->current_size = 0;
 
+  node *nd;
+  uint32_t new_hash;
   for(uint32_t i = 0; i < old_cap; i++) {
-    if(old_nodelist[i] == NULL) continue; 
-    old_nodelist[i]->hash = str_hashcode(old_nodelist[i]->key) % new_cap;
-    self->nodelist[old_nodelist[i]->hash] = old_nodelist[i];
-  }
-  
-  free(old_nodelist);
-}
+    if(old_nodelist[i] == NULL) continue;
+    nd = old_nodelist[i];
 
+    new_hash = str_hashcode(nd->key) % new_cap;
+    nd->hash = new_hash;
 
+    self->nodelist[nd->hash] = nd;
+
+    while(nd->next != NULL) {
+      nd = nd->next;
+      nd->hash = new_hash;
+    }
+    
     self->current_size++;
   }
   
+  free(old_nodelist);
 }
 
 
