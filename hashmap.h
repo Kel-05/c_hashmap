@@ -13,6 +13,7 @@ typedef struct hashmap {
 
   int (*get)(struct hashmap*, char*);
   void (*put)(struct hashmap*, char*, int);
+  void (*remove)(struct hashmap*, char*);
   void (*destroy)(struct hashmap *);
 } hashmap;
 

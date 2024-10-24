@@ -35,6 +35,22 @@ void node_destroy(node *self) {
   }
 }
 
+node *node_get(hashmap *self, char *key, int prevflag) {
+  uint32_t hash = str_hashcode(key) % self->init_cap;
+  node *nd = self->nodelist[hash], *prev_nd = nd;
+  
+  while(nd != NULL) {
+    if(strcmp(nd->key, key) == 0) {
+      if(prevflag) return prev_nd;
+      return nd;
+    }
+    prev_nd = nd;
+    nd = nd->next;
+  }
+  
+  return NULL;
+}
+
 void hashmap_destroy(hashmap *self) {
   for(uint32_t i = 0; i < self->init_cap; i++) {
     node_destroy(self->nodelist[i]);
@@ -67,20 +83,10 @@ void hashmap_rehash(hashmap *self) {
 }
 
 int hashmap_get(hashmap *self, char *key) {
-  uint32_t hash = str_hashcode(key) % self->init_cap;
-  node *nd = self->nodelist[hash];
+  node *nd = node_get(self, key, 0);
 
-  if(nd == NULL) {
-    return -1;
-  }
-  if(nd->next == NULL) {
+  if(nd != NULL) {
     return nd->value;
-  }
-  while(nd != NULL) {
-    if(strcmp(nd->key, key) == 0) {
-      return nd->value;
-    }
-    nd = nd->next;
   }
   
   return -1;
@@ -101,14 +107,35 @@ void hashmap_put(hashmap *self, char *key, int value) {
   if(*next_nd == NULL) {
     self->current_size++;
   }
-  while(*next_nd != NULL) {
+  else {
     next_nd = &(*next_nd)->next;
+    while(*next_nd != NULL) {
+      next_nd = &(*next_nd)->next;
+    }
   }
   *next_nd = nd;
 
   if((double) self->current_size / self->init_cap >= self->load_factor) {
     hashmap_rehash(self);
   }
+}
+
+void hashmap_remove(hashmap *self, char *key) {
+  node *prev_nd = node_get(self, key, 1);
+  node *nd = node_get(self, key, 0);
+
+  if(prev_nd == NULL || nd == NULL) return;
+
+  if(prev_nd == nd) {
+    self->nodelist[nd->hash] = nd->next;
+    free(nd->key);
+    free(nd);
+    return;
+  }
+  
+  prev_nd->next = nd->next;
+  free(nd->key);
+  free(nd);
 }
 
 void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor) {
@@ -122,5 +149,6 @@ void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double loa
   
   self->get = hashmap_get;
   self->put = hashmap_put;
+  self->remove = hashmap_remove;
   self->destroy = hashmap_destroy;
 }
