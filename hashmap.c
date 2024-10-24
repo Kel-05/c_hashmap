@@ -61,12 +61,28 @@ void hashmap_destroy(hashmap *self) {
   free(self->nodelist);
 }
 
+
+size_t hashmap_size(hashmap *self) {
+  return self->current_size;
+}
+
+
+int hashmap_get(hashmap *self, char *key) {
+  node *nd = node_get(self, key, 0);
+
+  if(nd != NULL) {
+    return nd->value;
+  }
+  
+  return -1;
+}
+
 void hashmap_rehash(hashmap *self) {
   uint32_t new_cap = self->init_cap << 1;
   uint32_t old_cap = self->init_cap;
   
   if(new_cap > self->max_cap || new_cap < old_cap) {
-    fprintf(stderr, "Error: hashmap_rehash: invalid capacity: %u\n", new_cap);
+    fprintf(stderr, "hashmap_rehash: invalid capacity: %u\n", new_cap);
     abort();
   }
   
@@ -86,15 +102,10 @@ void hashmap_rehash(hashmap *self) {
   free(old_nodelist);
 }
 
-int hashmap_get(hashmap *self, char *key) {
-  node *nd = node_get(self, key, 0);
 
-  if(nd != NULL) {
-    return nd->value;
     self->current_size++;
   }
   
-  return -1;
 }
 
 
@@ -156,7 +167,8 @@ void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double loa
 
   self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
   memset(self->nodelist, 0, sizeof(node *) * self->init_cap);
-  
+
+  self->size = hashmap_size;
   self->get = hashmap_get;
   self->put = hashmap_put;
   self->remove = hashmap_remove;

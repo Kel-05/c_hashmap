@@ -1,6 +1,7 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 #include <stdint.h>
+#include <stdio.h>
 
 struct node;
 
@@ -11,6 +12,7 @@ typedef struct hashmap {
   uint32_t current_size;
   double load_factor;
 
+  size_t (*size)(struct hashmap*);
   int (*get)(struct hashmap*, char*);
   void (*put)(struct hashmap*, char*, int);
   void (*remove)(struct hashmap*, char*);
