@@ -8,12 +8,14 @@
 #define DEF_MAX_CAP (2 << 30)
 #define DEF_LOAD_FACTOR 0.75
 
+
 typedef struct node {
   uint32_t hash;
   char *key;
   int value;
   struct node *next;
 } node;
+
 
 uint32_t str_hashcode(char *key) {
   uint32_t hash = 0;
@@ -34,6 +36,7 @@ void node_destroy(node *self) {
     free(tmp);
   }
 }
+
 
 node *node_get(hashmap *self, char *key, int prevflag) {
   uint32_t hash = str_hashcode(key) % self->init_cap;
@@ -66,10 +69,11 @@ void hashmap_rehash(hashmap *self) {
     fprintf(stderr, "Error: hashmap_rehash: invalid capacity: %u\n", new_cap);
     abort();
   }
+  
   self->init_cap = new_cap;
-
   node **old_nodelist = self->nodelist;
   self->nodelist = (node **) malloc(sizeof(node *) * new_cap);
+  
   memset(self->nodelist, 0, sizeof(node *) * new_cap);
   self->current_size = 0;
 
@@ -87,15 +91,18 @@ int hashmap_get(hashmap *self, char *key) {
 
   if(nd != NULL) {
     return nd->value;
+    self->current_size++;
   }
   
   return -1;
 }
 
+
 void hashmap_put(hashmap *self, char *key, int value) {
   uint32_t hash = str_hashcode(key) % self->init_cap;
   node *nd = (node *) malloc(sizeof(node));
   node **next_nd = &self->nodelist[hash];
+
   nd->key = (char *) malloc(strlen(key) + 1);
   memset(nd->key, 0, strlen(key) + 1);
   
@@ -120,6 +127,7 @@ void hashmap_put(hashmap *self, char *key, int value) {
   }
 }
 
+
 void hashmap_remove(hashmap *self, char *key) {
   node *prev_nd = node_get(self, key, 1);
   node *nd = node_get(self, key, 0);
@@ -128,6 +136,7 @@ void hashmap_remove(hashmap *self, char *key) {
 
   if(prev_nd == nd) {
     self->nodelist[nd->hash] = nd->next;
+    if(nd->next == NULL) self->current_size--;
     free(nd->key);
     free(nd);
     return;
@@ -137,6 +146,7 @@ void hashmap_remove(hashmap *self, char *key) {
   free(nd->key);
   free(nd);
 }
+
 
 void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor) {
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
