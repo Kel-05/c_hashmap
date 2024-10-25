@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hashmap.h"
@@ -16,6 +14,14 @@ typedef struct node {
   struct node *next;
 } node;
 
+typedef struct hashmap {
+  node **nodelist;
+  uint32_t init_cap;
+  uint32_t max_cap;
+  uint32_t current_size;
+  double load_factor;
+} hashmap;
+
 
 uint32_t str_hashcode(char *key) {
   uint32_t hash = 0;
@@ -27,6 +33,7 @@ uint32_t str_hashcode(char *key) {
   
   return hash;
 }
+
 
 void node_destroy(node *self) {
   while(self != NULL) {
@@ -54,11 +61,13 @@ node *node_get(hashmap *self, char *key, int prevflag) {
   return NULL;
 }
 
+
 void hashmap_destroy(hashmap *self) {
   for(uint32_t i = 0; i < self->init_cap; i++) {
     node_destroy(self->nodelist[i]);
   }
   free(self->nodelist);
+  free(self);
 }
 
 
@@ -76,6 +85,7 @@ int hashmap_get(hashmap *self, char *key) {
   
   return -1;
 }
+
 
 void hashmap_rehash(hashmap *self) {
   uint32_t new_cap = self->init_cap << 1;
@@ -166,7 +176,9 @@ void hashmap_remove(hashmap *self, char *key) {
 }
 
 
-void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor) {
+hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, double load_factor) {
+  hashmap *self = (hashmap *) malloc(sizeof(hashmap));
+  
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
   self->max_cap = max_cap ? max_cap : DEF_MAX_CAP;
   self->load_factor = load_factor <= 1 && load_factor > 0 ? load_factor : DEF_LOAD_FACTOR;
@@ -175,9 +187,5 @@ void hashmap_init(hashmap *self, uint32_t init_cap, uint32_t max_cap, double loa
   self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
   memset(self->nodelist, 0, sizeof(node *) * self->init_cap);
 
-  self->size = hashmap_size;
-  self->get = hashmap_get;
-  self->put = hashmap_put;
-  self->remove = hashmap_remove;
-  self->destroy = hashmap_destroy;
+  return self;
 }

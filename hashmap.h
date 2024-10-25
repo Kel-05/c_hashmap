@@ -1,24 +1,15 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
-#include <stdint.h>
 #include <stdio.h>
+#include <stdint.h>
 
-struct node;
+typedef struct hashmap hashmap;
 
-typedef struct hashmap {
-  struct node **nodelist;
-  uint32_t init_cap;
-  uint32_t max_cap;
-  uint32_t current_size;
-  double load_factor;
-
-  size_t (*size)(struct hashmap*);
-  int (*get)(struct hashmap*, char*);
-  void (*put)(struct hashmap*, char*, int);
-  void (*remove)(struct hashmap*, char*);
-  void (*destroy)(struct hashmap *);
-} hashmap;
-
-void hashmap_init(struct hashmap *self, uint32_t init_cap, uint32_t max_cap, double load_factor);
+hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, double load_factor);
+void hashmap_put(hashmap *self, char *key, int value);
+void hashmap_remove(hashmap *self, char *key);
+int hashmap_get(hashmap *self, char *key);
+void hashmap_destroy(hashmap *self);
+size_t hashmap_size(hashmap *self);
 
 #endif
