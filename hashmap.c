@@ -54,6 +54,7 @@ node *node_get(hashmap *self, char *key, int prevflag) {
       if(prevflag) return prev_nd;
       return nd;
     }
+    
     prev_nd = nd;
     nd = nd->next;
   }
@@ -66,6 +67,7 @@ void hashmap_destroy(hashmap *self) {
   for(uint32_t i = 0; i < self->init_cap; i++) {
     node_destroy(self->nodelist[i]);
   }
+  
   free(self->nodelist);
   free(self);
 }
@@ -103,23 +105,18 @@ void hashmap_rehash(hashmap *self) {
   memset(self->nodelist, 0, sizeof(node *) * new_cap);
   self->current_size = 0;
 
-  node *nd;
-  uint32_t new_hash;
   for(uint32_t i = 0; i < old_cap; i++) {
     if(old_nodelist[i] == NULL) continue;
+    node *nd, *old_nd;
     nd = old_nodelist[i];
 
-    new_hash = str_hashcode(nd->key) % new_cap;
-    nd->hash = new_hash;
-
-    self->nodelist[nd->hash] = nd;
-
-    while(nd->next != NULL) {
+    while(nd != NULL) {
+      hashmap_put(self, nd->key, nd->value);
+      old_nd = nd;
       nd = nd->next;
-      nd->hash = new_hash;
+      free(old_nd->key);
+      free(old_nd);
     }
-    
-    self->current_size++;
   }
   
   free(old_nodelist);
@@ -148,6 +145,7 @@ void hashmap_put(hashmap *self, char *key, int value) {
       next_nd = &(*next_nd)->next;
     }
   }
+  
   *next_nd = nd;
 
   if((double) self->current_size / self->init_cap >= self->load_factor) {
@@ -181,7 +179,9 @@ hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, double load_factor) {
   
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
   self->max_cap = max_cap ? max_cap : DEF_MAX_CAP;
-  self->load_factor = load_factor <= 1 && load_factor > 0 ? load_factor : DEF_LOAD_FACTOR;
+  self->load_factor =
+    load_factor <= 1 && load_factor > 0 ? load_factor : DEF_LOAD_FACTOR;
+
   self->current_size = 0;
 
   self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
