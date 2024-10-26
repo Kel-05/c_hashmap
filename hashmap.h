@@ -5,7 +5,7 @@
 
 typedef struct hashmap hashmap;
 
-hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, double load_factor);
+hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, float load_factor);
 void hashmap_put(hashmap *self, char *key, int value);
 void hashmap_remove(hashmap *self, char *key);
 int hashmap_get(hashmap *self, char *key);

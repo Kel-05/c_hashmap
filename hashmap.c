@@ -3,8 +3,8 @@
 #include "hashmap.h"
 
 #define DEF_INIT_CAP 16
-#define DEF_MAX_CAP (2 << 30)
-#define DEF_LOAD_FACTOR 0.75
+#define DEF_MAX_CAP (1 << 30)
+#define DEF_LOAD_FACTOR 0.75f
 
 
 typedef struct node {
@@ -19,7 +19,7 @@ typedef struct hashmap {
   uint32_t init_cap;
   uint32_t max_cap;
   uint32_t current_size;
-  double load_factor;
+  float load_factor;
 } hashmap;
 
 
@@ -148,7 +148,7 @@ void hashmap_put(hashmap *self, char *key, int value) {
   
   *next_nd = nd;
 
-  if((double) self->current_size / self->init_cap >= self->load_factor) {
+  if((float) self->current_size / self->init_cap >= self->load_factor) {
     hashmap_rehash(self);
   }
 }
@@ -174,7 +174,7 @@ void hashmap_remove(hashmap *self, char *key) {
 }
 
 
-hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, double load_factor) {
+hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, float load_factor) {
   hashmap *self = (hashmap *) malloc(sizeof(hashmap));
   
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
