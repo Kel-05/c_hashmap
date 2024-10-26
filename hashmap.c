@@ -97,12 +97,14 @@ static void hashmap_rehash(hashmap *self) {
     fprintf(stderr, "hashmap_rehash: invalid capacity: %u\n", new_cap);
     abort();
   }
+
+  size_t nd_size = sizeof(node *);
   
   self->init_cap = new_cap;
   node **old_nodelist = self->nodelist;
-  self->nodelist = (node **) malloc(sizeof(node *) * new_cap);
+  self->nodelist = malloc(nd_size * new_cap);
   
-  memset(self->nodelist, 0, sizeof(node *) * new_cap);
+  memset(self->nodelist, 0, nd_size * new_cap);
   self->current_size = 0;
 
   for(uint32_t i = 0; i < old_cap; i++) {
@@ -125,11 +127,12 @@ static void hashmap_rehash(hashmap *self) {
 
 void hashmap_put(hashmap *self, char *key, int value) {
   uint32_t hash = str_hashcode(key) % self->init_cap;
-  node *nd = (node *) malloc(sizeof(node));
+  node *nd = malloc(sizeof(node));
   node **next_nd = &self->nodelist[hash];
+  size_t keylen = strlen(key) + 1;
 
-  nd->key = (char *) malloc(strlen(key) + 1);
-  memset(nd->key, 0, strlen(key) + 1);
+  nd->key = malloc(keylen);
+  memset(nd->key, 0, keylen);
   
   nd->hash = hash;
   strcpy(nd->key, key);
@@ -175,7 +178,8 @@ void hashmap_remove(hashmap *self, char *key) {
 
 
 hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, float load_factor) {
-  hashmap *self = (hashmap *) malloc(sizeof(hashmap));
+  hashmap *self = malloc(sizeof(hashmap));
+  size_t nd_size = sizeof(node *);
   
   self->init_cap = init_cap ? init_cap : DEF_INIT_CAP;
   self->max_cap = max_cap ? max_cap : DEF_MAX_CAP;
@@ -184,8 +188,8 @@ hashmap *hashmap_init(uint32_t init_cap, uint32_t max_cap, float load_factor) {
 
   self->current_size = 0;
 
-  self->nodelist = (node **) malloc(sizeof(node *) * self->init_cap);
-  memset(self->nodelist, 0, sizeof(node *) * self->init_cap);
+  self->nodelist = malloc(nd_size * self->init_cap);
+  memset(self->nodelist, 0, nd_size * self->init_cap);
 
   return self;
 }
