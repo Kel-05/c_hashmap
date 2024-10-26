@@ -35,7 +35,7 @@ uint32_t str_hashcode(char *key) {
 }
 
 
-void node_destroy(node *self) {
+static void node_destroy(node *self) {
   while(self != NULL) {
     node *tmp = self;
     self = self->next;
@@ -45,7 +45,7 @@ void node_destroy(node *self) {
 }
 
 
-node *node_get(hashmap *self, char *key, int prevflag) {
+static node *node_get(hashmap *self, char *key, int prevflag) {
   uint32_t hash = str_hashcode(key) % self->init_cap;
   node *nd = self->nodelist[hash], *prev_nd = nd;
   
@@ -89,7 +89,7 @@ int hashmap_get(hashmap *self, char *key) {
 }
 
 
-void hashmap_rehash(hashmap *self) {
+static void hashmap_rehash(hashmap *self) {
   uint32_t new_cap = self->init_cap << 1;
   uint32_t old_cap = self->init_cap;
   
